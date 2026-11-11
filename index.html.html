@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FutParódia 1v1 - Ultimate Arcade</title>
+    <!-- GOOGLE FONTS: ORBITRON & RAJDHANI -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            font-family: 'Rajdhani', sans-serif;
+        }
+        h1, h2, h3, .font-heading {
+            font-family: 'Orbitron', sans-serif;
+        }
+        body {
+            background: #030712;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+        .touch-btn {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        .glow-card {
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+        }
+        .pulse-glow {
+            animation: pulseGlow 1.5s infinite alternate;
+        }
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+            100% { box-shadow: 0 0 25px rgba(16, 185, 129, 0.8); }
+        }
+        .modal-enter {
+            animation: modalEnter 0.3s ease-out forwards;
+        }
+        @keyframes modalEnter {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between items-center relative overflow-hidden bg-slate-950 text-white select-none">
+
+    <!-- BARRA SUPERIOR E DE PLACAR DA TRANSMISSÃO -->
+    <header class="w-full bg-slate-900/95 border-b border-slate-800/90 px-4 py-2.5 text-white flex justify-between items-center z-20 shadow-xl backdrop-blur-md">
+        <div class="flex items-center gap-2">
+            <button id="btn-teams" class="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:brightness-110 active:scale-95 px-4 py-2 rounded-xl font-heading font-black text-slate-950 flex items-center gap-2 shadow-lg shadow-amber-950/40 border border-amber-300/40 transition">
+                <span>🛡️</span> <span class="hidden sm:inline uppercase">Times</span>
+            </button>
+            <button id="btn-mode-selector" class="bg-slate-800 hover:bg-slate-700 active:scale-95 px-3.5 py-2 rounded-xl font-heading font-extrabold text-xs text-slate-200 border border-slate-700 transition flex items-center gap-1.5">
+                <span id="mode-icon">🎮</span> <span id="mode-text">MODOS / MULTIPLAYER</span>
+            </button>
+            <div id="room-code-display" class="hidden bg-emerald-900/50 border border-emerald-500/50 text-emerald-400 px-3 py-1.5 rounded-xl font-heading font-bold text-xs">
+                SALA: <span id="room-code-val" class="text-white">---</span>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="btn-sound" class="bg-slate-800 hover:bg-slate-700 active:scale-95 px-3 py-2 rounded-xl border border-slate-700 font-heading font-bold text-xs text-slate-200 transition">
+                🔊
+            </button>
+            <button id="btn-fullscreen" class="bg-slate-800 hover:bg-slate-700 active:scale-95 px-3 py-2 rounded-xl border border-slate-700 font-heading font-bold text-xs text-slate-200 transition hidden sm:block">
+                ⛶ TELA CHEIA
+            </button>
+        </div>
+    </header>
+
+    <!-- ÁREA DO CAMPO DE JOGO CANVASES MULTI-CAMADA -->
+    <main id="canvas-container" class="relative flex-1 w-full flex items-center justify-center p-2">
+        <canvas id="gameCanvas" class="rounded-2xl shadow-[0_0_60px_rgba(0,0,0,0.9)] border-4 border-slate-800/90"></canvas>
+    </main>
+
+    <!-- PAINEL DE CONTROLES NO NAVEGADOR E MOBILE -->
+    <footer id="mobile-controls" class="w-full h-28 relative z-20 flex justify-between items-center px-6 mb-2">
+        <!-- BOTAO CHUTE JOGADOR 1 -->
+        <button id="btn-kick-p1" class="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-500 via-red-600 to-amber-500 active:brightness-125 text-white font-heading font-black text-sm flex flex-col items-center justify-center shadow-xl shadow-red-950/60 border-2 border-white/80 touch-btn active:scale-90 transition">
+            <span class="tracking-wider text-base">CHUTE</span>
+            <span class="text-[11px] font-sans font-extrabold">(CASA)</span>
+        </button>
+
+        <!-- DICA DE CONTROLES PARA COMPUTADOR -->
+        <div id="controls-hint" class="hidden md:flex flex-col items-center justify-center text-slate-300 text-xs font-medium bg-slate-900/90 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-700/80 shadow-2xl gap-1">
+            <div class="flex items-center gap-2">
+                <span class="text-amber-400 font-heading font-black text-[11px] tracking-wider uppercase">Jogador 1:</span> 
+                <span class="font-mono bg-slate-800 px-2 py-0.5 rounded text-amber-300 border border-slate-700">W A S D</span> + 
+                <span class="font-mono bg-emerald-600 px-2.5 py-0.5 rounded text-slate-950 font-bold">ESPAÇO</span>
+            </div>
+            <div class="flex items-center gap-2" id="hint-p2">
+                <span class="text-cyan-400 font-heading font-black text-[11px] tracking-wider uppercase">Jogador 2:</span> 
+                <span class="font-mono bg-slate-800 px-2 py-0.5 rounded text-cyan-300 border border-slate-700">SETAS</span> + 
+                <span class="font-mono bg-cyan-400 px-2.5 py-0.5 rounded text-slate-950 font-bold">ENTER</span>
+            </div>
+        </div>
+
+        <!-- BOTAO CHUTE JOGADOR 2 -->
+        <button id="btn-kick-p2" class="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-600 to-indigo-600 active:brightness-125 text-white font-heading font-black text-sm flex flex-col items-center justify-center shadow-xl shadow-blue-950/60 border-2 border-white/80 touch-btn active:scale-90 transition">
+            <span class="tracking-wider text-base">CHUTE</span>
+            <span class="text-[11px] font-sans font-extrabold">(FORA)</span>
+        </button>
+    </footer>
+
+    <!-- MODAL PREMIUM DE SELEÇÃO DE TIME E REGRAS -->
+    <div id="modal-team-select" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900/95 text-white border border-slate-700/80 rounded-3xl w-full max-w-xl p-6 flex flex-col gap-5 shadow-2xl max-h-[94vh] custom-scroll overflow-y-auto modal-enter">
+            <div class="text-center">
+                <h2 class="text-3xl sm:text-4xl font-heading font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-yellow-300 uppercase tracking-wider drop-shadow-md">
+                    ⚽ FUTPARÓDIA
+                </h2>
+                <p class="text-xs text-slate-400 font-medium mt-1">Escolha seu clube com super-poderes!</p>
+            </div>
+
+            <!-- TABS JOGADOR 1 / JOGADOR 2 -->
+            <div class="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+                <button id="tab-p1" class="flex-1 py-3 rounded-xl font-heading font-extrabold text-center text-amber-400 bg-slate-800 shadow-md text-xs uppercase tracking-wider transition">
+                    🔴 CASA (P1)
+                </button>
+                <button id="tab-p2" class="flex-1 py-3 rounded-xl font-heading font-extrabold text-center text-slate-400 text-xs uppercase tracking-wider transition">
+                    🔵 FORA (P2)
+                </button>
+            </div>
+
+            <!-- GRID DE CARDS ESTILO FIFA ULTIMATE TEAM -->
+            <div id="teams-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+
+            <!-- CONFIGURAÇÃO DE REGRAS E GOLS -->
+            <div class="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 flex flex-col gap-2">
+                <label class="text-xs text-amber-400 font-heading font-black tracking-wider uppercase block">🏆 LIMITE DE GOLS:</label>
+                <select id="select-goal-limit" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-bold text-sm text-white focus:outline-none focus:border-amber-400 transition">
+                    <option value="3">3 Gols (Rápido)</option>
+                    <option value="5" selected>5 Gols (Padrão)</option>
+                    <option value="10">10 Gols (Desafio)</option>
+                    <option value="0">Partida por Tempo</option>
+                </select>
+            </div>
+
+            <!-- BOTÃO PRINCIPAL -->
+            <button id="btn-start-game" class="w-full bg-gradient-to-r from-emerald-400 via-green-500 to-teal-400 hover:brightness-110 active:scale-95 text-slate-950 py-4 rounded-2xl font-heading font-black text-xl uppercase tracking-wider shadow-xl shadow-emerald-950/60 pulse-glow transition">
+                ⚡ INICIAR PARTIDA
+            </button>
+
+            <button id="btn-back-to-mode" class="mt-1 text-slate-400 hover:text-white text-xs font-bold transition text-center uppercase tracking-wider">
+                ⬅️ Trocar Modo de Jogo
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL SELEÇÃO DE MODO DE JOGO MULTIPLAYER -->
+    <div id="modal-mode-select" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900/95 text-white border border-slate-700/80 rounded-3xl w-full max-w-md p-6 flex flex-col gap-4 shadow-2xl modal-enter">
+            <div class="text-center mb-2">
+                <h2 class="text-2xl font-heading font-black text-white uppercase tracking-wider">MODO DE JOGO</h2>
+                <p class="text-xs text-slate-400 font-medium">Como você quer jogar?</p>
+            </div>
+
+            <button id="btn-mode-local" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 p-4 rounded-2xl flex items-center gap-4 transition active:scale-95">
+                <span class="text-3xl">👥</span>
+                <div class="text-left">
+                    <div class="font-heading font-bold text-lg text-amber-400">Local (2 Jogadores)</div>
+                    <div class="text-xs text-slate-400">Joguem juntos no mesmo teclado/tela.</div>
+                </div>
+            </button>
+
+            <button id="btn-mode-bot" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 p-4 rounded-2xl flex items-center gap-4 transition active:scale-95">
+                <span class="text-3xl">🤖</span>
+                <div class="text-left">
+                    <div class="font-heading font-bold text-lg text-cyan-400">Contra a Máquina</div>
+                    <div class="text-xs text-slate-400">Treine contra a Inteligência Artificial.</div>
+                </div>
+            </button>
+
+            <div class="h-px w-full bg-slate-800 my-2"></div>
+
+            <button id="btn-mode-create-room" class="w-full bg-emerald-900/40 hover:bg-emerald-800/60 border border-emerald-700/50 p-4 rounded-2xl flex items-center gap-4 transition active:scale-95">
+                <span class="text-3xl">🌐</span>
+                <div class="text-left">
+                    <div class="font-heading font-bold text-lg text-emerald-400">Criar Sala Online</div>
+                    <div class="text-xs text-emerald-200/70">Crie uma sala e envie o código a um amigo.</div>
+                </div>
+            </button>
+
+            <div class="flex gap-2">
+                <input type="text" id="input-room-code" placeholder="CÓDIGO" maxlength="4" class="w-1/3 bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-center font-heading font-bold text-xl uppercase text-white focus:outline-none focus:border-amber-400 placeholder:text-slate-600">
+                <button id="btn-mode-join-room" class="flex-1 bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-heading font-bold rounded-xl transition">
+                    ENTRAR NA SALA
+                </button>
+            </div>
+
+            <button id="btn-close-mode" class="mt-2 text-slate-500 hover:text-white text-sm font-bold transition">CANCELAR</button>
+        </div>
+    </div>
+
+    <!-- MODAL DE ALERTA/MENSAGENS -->
+    <div id="modal-alert" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-amber-500 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl modal-enter">
+            <h3 id="alert-title" class="font-heading font-black text-2xl text-amber-400 mb-2">Atenção</h3>
+            <p id="alert-message" class="text-slate-300 font-medium mb-6"></p>
+            <button id="btn-alert-ok" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-heading font-bold px-8 py-2.5 rounded-xl active:scale-95 transition">
+                OK
+            </button>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE FIREBASE E ENGINE DO JOGO -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // CONFIGURAÇÃO DO FIREBASE (Gerenciada pelo ambiente Canvas)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'futparodia-multi';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        
+        let app, db, auth, user;
+        let onlineRoomRef = null;
+        let unsubscribeRoom = null;
+
+        // ESTADOS ONLINE
+        let isOnline = false;
+        let isHost = true;
+        let onlineRoomCode = "";
+        let networkState = null;
+        let lastSyncTime = 0;
+
+        // INICIALIZAR FIREBASE
+        async function initFirebase() {
+            try {
+                if (Object.keys(firebaseConfig).length > 0) {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    
+                    if (typeof __initial_auth_token !== 'undefined') {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    user = auth.currentUser;
+                }
+            } catch (err) {
+                console.error("Erro ao iniciar Firebase:", err);
+            }
+        }
+
+        initFirebase();
+
+        // PARÓDIAS COM ATRIBUTOS DIVERSIFICADOS E ESCUDOS SVG
+        const TEAMS = {
+            barcelona: {
+                id: 'barcelona',
+                name: "Bar Sem Lona", color1: "#a50044", color2: "#004d98", perk: "Super Chute",
+                kickPower: 17, speed: 0.35, curve: 1.4, icon: '🍺',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M10 20 Q50 5 90 20 L90 60 Q50 95 10 60 Z" fill="#004d98" stroke="#edbb00" stroke-width="4"/><path d="M50 15 L50 90 M20 40 L80 40" stroke="#a50044" stroke-width="12"/><circle cx="50" cy="50" r="14" fill="#edbb00"/><text x="50" y="55" font-size="14" text-anchor="middle">🍺</text></svg>`
+            },
+            realpadre: {
+                id: 'realpadre',
+                name: "Real Padre", color1: "#ffffff", color2: "#febe10", perk: "Resistência",
+                kickPower: 14, speed: 0.38, curve: 1.1, icon: '✝️',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="55" r="35" fill="#ffffff" stroke="#febe10" stroke-width="5"/><path d="M35 15 L65 15 L60 25 L40 25 Z" fill="#febe10"/><text x="50" y="65" font-size="20" text-anchor="middle">✝️</text></svg>`
+            },
+            jumentos: {
+                id: 'jumentos',
+                name: "Jumentos FC", color1: "#1e1e1e", color2: "#ffffff", perk: "Arrancada",
+                kickPower: 13, speed: 0.44, curve: 0.9, icon: '🫏',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M50 10 Q90 30 75 85 Q50 100 25 85 Q10 30 50 10 Z" fill="#000000" stroke="#edbb00" stroke-width="4"/><path d="M35 25 L65 25 M35 45 L65 45 M35 65 L65 65" stroke="#ffffff" stroke-width="6"/><text x="50" y="65" font-size="22" text-anchor="middle">🫏</text></svg>`
+            },
+            curtinas: {
+                id: 'curtinas',
+                name: "Curtinas", color1: "#ffffff", color2: "#111111", perk: "Chute Triplo",
+                kickPower: 19, speed: 0.32, curve: 1.6, icon: '⚓',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="40" fill="#ffffff" stroke="#000000" stroke-width="6"/><path d="M50 10 L50 90 M10 50 L90 50" stroke="#000000" stroke-width="4"/><circle cx="50" cy="50" r="18" fill="#c00"/><text x="50" y="56" font-size="14" text-anchor="middle">⚓</text></svg>`
+            },
+            palermas: {
+                id: 'palermas',
+                name: "Palermas", color1: "#006437", color2: "#ffffff", perk: "Equilíbrio",
+                kickPower: 15, speed: 0.39, curve: 1.2, icon: '🐷',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z" fill="#006437" stroke="#ffffff" stroke-width="4"/><circle cx="50" cy="50" r="22" fill="#ffffff"/><text x="50" y="58" font-size="18" text-anchor="middle">🐷</text></svg>`
+            }
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameState = 'MENU';
+        let gameMode = '2P'; // 2P, AI, ONLINE
+        let p1TeamKey = 'barcelona';
+        let p2TeamKey = 'realpadre';
+        let selectedTab = 'p1';
+        let goalLimit = 5;
+
+        let soundEnabled = true;
+        let scoreP1 = 0;
+        let scoreP2 = 0;
+        let matchTime = 180;
+        let timerInterval = null;
+
+        // CÂMERA DINÂMICA
+        let shakeTime = 0;
+        let shakeIntensity = 0;
+
+        function triggerShake(intensity = 6, duration = 12) {
+            shakeIntensity = intensity;
+            shakeTime = duration;
+        }
+
+        // SISTEMA DE PARTÍCULAS
+        let particles = [];
+        function createParticles(x, y, color, count = 15, isConfetti = false) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = isConfetti ? (2 + Math.random() * 8) : (1 + Math.random() * 5);
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - (isConfetti ? 2 : 0),
+                    color: isConfetti ? `hsl(${Math.random() * 360}, 90%, 60%)` : color,
+                    life: 1.0, size: isConfetti ? (4 + Math.random() * 4) : (2 + Math.random() * 3),
+                    gravity: isConfetti ? 0.15 : 0
+                });
+            }
+        }
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy;
+                if (p.gravity) p.vy += p.gravity;
+                p.life -= 0.025;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.save(); ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+            });
+        }
+
+        // ÁUDIO
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                if (type === 'kick') {
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.14);
+                    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.14);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.14);
+                } else if (type === 'bounce') {
+                    osc.frequency.setValueAtTime(340, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+                } else if (type === 'goal') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.7);
+                    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.8);
+                }
+            } catch (e) {}
+        }
+
+        // OBJETOS FÍSICOS DA PARTIDA
+        const ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 11, spin: 0, trail: [] };
+        const player1 = { x: 0, y: 0, vx: 0, vy: 0, radius: 25, mass: 1.2, stamina: 100, isKicking: false, team: 'barcelona' };
+        const player2 = { x: 0, y: 0, vx: 0, vy: 0, radius: 25, mass: 1.2, stamina: 100, isKicking: false, team: 'realpadre' };
+
+        const keys = {};
+        let guestNetworkKeys = { up: false, down: false, left: false, right: false, kick: false };
+
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            const w = container.clientWidth - 16;
+            const h = container.clientHeight - 16;
+            const aspect = 16 / 9;
+
+            if (w / h > aspect) {
+                canvas.height = h; canvas.width = h * aspect;
+            } else {
+                canvas.width = w; canvas.height = w / aspect;
+            }
+            if (gameState === 'MENU') resetPositions();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function resetPositions() {
+            ball.x = canvas.width / 2; ball.y = canvas.height / 2; ball.vx = 0; ball.vy = 0; ball.spin = 0; ball.trail = [];
+            player1.x = canvas.width * 0.22; player1.y = canvas.height / 2; player1.vx = 0; player1.vy = 0;
+            player2.x = canvas.width * 0.78; player2.y = canvas.height / 2; player2.vx = 0; player2.vy = 0;
+        }
+
+        // ALERTA CUSTOMIZADO (Remove o window.alert bloqueado)
+        function customAlert(title, message, callback = null) {
+            document.getElementById('alert-title').innerText = title;
+            document.getElementById('alert-message').innerText = message;
+            const modal = document.getElementById('modal-alert');
+            modal.classList.remove('hidden');
+            document.getElementById('btn-alert-ok').onclick = () => {
+                modal.classList.add('hidden');
+                if (callback) callback();
+            };
+        }
+
+        // MODAL DE SELEÇÃO DE TIME
+        function renderTeamPicker() {
+            const grid = document.getElementById('teams-grid');
+            grid.innerHTML = '';
+            Object.keys(TEAMS).forEach(key => {
+                const team = TEAMS[key];
+                const activeTeamKey = (selectedTab === 'p1') ? p1TeamKey : p2TeamKey;
+                const isSelected = activeTeamKey === key;
+                const powerPercent = Math.min(100, Math.round((team.kickPower / 20) * 100));
+                const speedPercent = Math.min(100, Math.round((team.speed / 0.46) * 100));
+
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-2xl border-2 flex flex-col items-center gap-1.5 cursor-pointer transition transform active:scale-95 ${isSelected ? 'border-amber-400 bg-slate-800/95 glow-card scale-105' : 'border-slate-800 bg-slate-950/70 hover:border-slate-700 hover:bg-slate-900/60'}`;
+                card.innerHTML = `
+                    <div class="w-14 h-14 relative my-1 drop-shadow-md">${team.svg}</div>
+                    <div class="font-heading font-black text-xs text-center truncate w-full text-white tracking-wide">${team.name}</div>
+                    <div class="text-[10px] text-amber-300 font-bold text-center bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">${team.perk}</div>
+                    <div class="w-full flex flex-col gap-1 mt-1 text-[9px] font-mono text-slate-400">
+                        <div class="flex justify-between items-center">
+                            <span>FORÇA</span><div class="w-14 h-1.5 bg-slate-900 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-red-500 to-amber-400" style="width:${powerPercent}%"></div></div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>VELOC.</span><div class="w-14 h-1.5 bg-slate-900 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-emerald-500 to-teal-300" style="width:${speedPercent}%"></div></div>
+                        </div>
+                    </div>
+                `;
+                card.onclick = () => {
+                    if (selectedTab === 'p1') p1TeamKey = key; else p2TeamKey = key;
+                    renderTeamPicker();
+                };
+                grid.appendChild(card);
+            });
+        }
+
+        // EVENTOS DE INTERFACE E MENUS
+        document.getElementById('tab-p1').onclick = () => { selectedTab = 'p1'; updateTabs(); };
+        document.getElementById('tab-p2').onclick = () => { selectedTab = 'p2'; updateTabs(); };
+        
+        function updateTabs() {
+            document.getElementById('tab-p1').className = `flex-1 py-3 rounded-xl font-heading font-extrabold text-center text-xs uppercase tracking-wider transition ${selectedTab==='p1' ? 'text-amber-400 bg-slate-800 shadow-md' : 'text-slate-400'}`;
+            document.getElementById('tab-p2').className = `flex-1 py-3 rounded-xl font-heading font-extrabold text-center text-xs uppercase tracking-wider transition ${selectedTab==='p2' ? 'text-amber-400 bg-slate-800 shadow-md' : 'text-slate-400'}`;
+            renderTeamPicker();
+        }
+
+        document.getElementById('btn-teams').onclick = () => document.getElementById('modal-team-select').classList.remove('hidden');
+        
+        document.getElementById('btn-back-to-mode').onclick = () => {
+            document.getElementById('modal-team-select').classList.add('hidden');
+            document.getElementById('modal-mode-select').classList.remove('hidden');
+        };
+
+        // GESTÃO DOS MODOS DE JOGO E FIREBASE
+        document.getElementById('btn-mode-selector').onclick = () => document.getElementById('modal-mode-select').classList.remove('hidden');
+        document.getElementById('btn-close-mode').onclick = () => {
+            document.getElementById('modal-mode-select').classList.add('hidden');
+            if (gameState === 'MENU') {
+                document.getElementById('modal-team-select').classList.remove('hidden');
+            }
+        };
+
+        function setModeUI(mode, icon, text) {
+            gameMode = mode;
+            document.getElementById('mode-icon').innerText = icon;
+            document.getElementById('mode-text').innerText = text;
+            document.getElementById('modal-mode-select').classList.add('hidden');
+            document.getElementById('room-code-display').classList.add('hidden');
+            
+            isOnline = (mode === 'ONLINE');
+            if (!isOnline && unsubscribeRoom) {
+                unsubscribeRoom();
+                unsubscribeRoom = null;
+            }
+
+            // Esconde dica de P2 se for online (o guest joga pela internet) ou bot
+            document.getElementById('hint-p2').style.display = (mode === '2P') ? 'flex' : 'none';
+
+            // Mostra o seletor de times após escolher o modo
+            if (gameState === 'MENU') {
+                document.getElementById('modal-team-select').classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('btn-mode-local').onclick = () => setModeUI('2P', '👥', 'MODO: LOCAL 2P');
+        document.getElementById('btn-mode-bot').onclick = () => setModeUI('AI', '🤖', 'MODO: vs BOT');
+        
+        // ONLINE: CRIAR SALA (HOST)
+        document.getElementById('btn-mode-create-room').onclick = async () => {
+            if (!user) return customAlert("Erro", "Conectando aos servidores... Tente novamente.");
+            const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+            onlineRoomCode = code;
+            isHost = true;
+            
+            try {
+                onlineRoomRef = doc(db, 'artifacts', appId, 'public', 'data', 'matches', code);
+                await setDoc(onlineRoomRef, {
+                    hostId: user.uid, guestId: null,
+                    p1Team: p1TeamKey, p2Team: p2TeamKey,
+                    gameState: 'WAITING', scoreP1: 0, scoreP2: 0, time: 180,
+                    data: null, guestInput: { up: false, down: false, left: false, right: false, kick: false }
+                });
+                
+                setModeUI('ONLINE', '🌐', 'HOST ONLINE');
+                document.getElementById('room-code-display').classList.remove('hidden');
+                document.getElementById('room-code-val').innerText = code;
+                customAlert("Sala Criada!", `Seu código é: ${code}\nEnvie para seu amigo e aguarde ele conectar.`);
+                listenToRoom();
+            } catch (e) {
+                console.error(e);
+                customAlert("Erro", "Não foi possível criar a sala.");
+            }
+        };
+
+        // ONLINE: ENTRAR NA SALA (GUEST)
+        document.getElementById('btn-mode-join-room').onclick = async () => {
+            if (!user) return customAlert("Erro", "Aguarde a conexão com servidor.");
+            const code = document.getElementById('input-room-code').value.toUpperCase().trim();
+            if (code.length !== 4) return customAlert("Inválido", "O código precisa ter 4 letras/números.");
+            
+            onlineRoomCode = code;
+            isHost = false;
+            
+            try {
+                onlineRoomRef = doc(db, 'artifacts', appId, 'public', 'data', 'matches', code);
+                const docSnap = await getDoc(onlineRoomRef);
+                
+                if (docSnap.exists()) {
+                    await updateDoc(onlineRoomRef, { guestId: user.uid, p2Team: p2TeamKey });
+                    setModeUI('ONLINE', '🌐', 'GUEST ONLINE');
+                    document.getElementById('room-code-display').classList.remove('hidden');
+                    document.getElementById('room-code-val').innerText = code;
+                    customAlert("Conectado!", "Você entrou na sala. O jogo começará quando o Host iniciar.");
+                    listenToRoom();
+                } else {
+                    customAlert("Não Encontrada", "Nenhuma sala com esse código.");
+                }
+            } catch (e) {
+                console.error(e);
+                customAlert("Erro", "Falha ao conectar na sala.");
+            }
+        };
+
+        function listenToRoom() {
+            if (unsubscribeRoom) unsubscribeRoom();
+            unsubscribeRoom = onSnapshot(onlineRoomRef, (snapshot) => {
+                if (!snapshot.exists()) return;
+                const data = snapshot.data();
+                
+                // Sincroniza times escolhidos
+                if (data.p1Team && p1TeamKey !== data.p1Team) p1TeamKey = data.p1Team;
+                if (data.p2Team && p2TeamKey !== data.p2Team) p2TeamKey = data.p2Team;
+
+                if (isHost) {
+                    // Host recebe os inputs do Guest
+                    if (data.guestInput) {
+                        guestNetworkKeys = data.guestInput;
+                    }
+                } else {
+                    // Guest recebe o estado físico do Host
+                    if (data.data) {
+                        networkState = data.data;
+                        scoreP1 = data.scoreP1;
+                        scoreP2 = data.scoreP2;
+                        matchTime = data.time;
+                        if (gameState !== data.gameState) {
+                            gameState = data.gameState;
+                            if (gameState === 'GOAL') scoreGoalEffect();
+                        }
+                    }
+                }
+            }, (error) => {
+                console.error("Erro no sync da sala", error);
+            });
+        }
+
+        document.getElementById('btn-sound').onclick = () => {
+            soundEnabled = !soundEnabled;
+            document.getElementById('btn-sound').innerText = soundEnabled ? "🔊" : "🔇";
+        };
+
+        document.getElementById('btn-fullscreen').onclick = () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
+            }
+        };
+
+        document.getElementById('btn-start-game').onclick = () => {
+            goalLimit = parseInt(document.getElementById('select-goal-limit').value);
+            player1.team = p1TeamKey;
+            player2.team = p2TeamKey;
+            document.getElementById('modal-team-select').classList.add('hidden');
+            
+            if (isOnline && isHost) {
+                updateDoc(onlineRoomRef, { gameState: 'PLAYING', p1Team: p1TeamKey, p2Team: p2TeamKey });
+            }
+            startNewGame();
+        };
+
+        // INPUTS (TOQUE E TECLADO)
+        document.getElementById('btn-kick-p1').addEventListener('touchstart', (e) => { e.preventDefault(); keys[' '] = true; });
+        document.getElementById('btn-kick-p1').addEventListener('touchend', (e) => { e.preventDefault(); keys[' '] = false; });
+        document.getElementById('btn-kick-p2').addEventListener('touchstart', (e) => { e.preventDefault(); keys['Enter'] = true; });
+        document.getElementById('btn-kick-p2').addEventListener('touchend', (e) => { e.preventDefault(); keys['Enter'] = false; });
+
+        window.addEventListener('keydown', e => keys[e.key] = true);
+        window.addEventListener('keyup', e => keys[e.key] = false);
+
+        // SINCRONIZAÇÃO DE REDE
+        function syncNetwork() {
+            if (!isOnline || !onlineRoomRef || gameState !== 'PLAYING') return;
+            const now = Date.now();
+            
+            if (isHost) {
+                // Host envia estado da física 10 vezes por segundo (100ms)
+                if (now - lastSyncTime > 100) {
+                    lastSyncTime = now;
+                    updateDoc(onlineRoomRef, {
+                        gameState, scoreP1, scoreP2, time: matchTime,
+                        data: {
+                            ball: {x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy},
+                            p1: {x: player1.x, y: player1.y, vx: player1.vx, vy: player1.vy, isKicking: player1.isKicking, stamina: player1.stamina},
+                            p2: {x: player2.x, y: player2.y, vx: player2.vx, vy: player2.vy, isKicking: player2.isKicking, stamina: player2.stamina}
+                        }
+                    }).catch(()=>{});
+                }
+            } else {
+                // Guest envia inputs se mudaram
+                if (now - lastSyncTime > 80) {
+                    lastSyncTime = now;
+                    const currentGuestInput = {
+                        up: keys['w'] || keys['W'] || keys['ArrowUp'] || false,
+                        down: keys['s'] || keys['S'] || keys['ArrowDown'] || false,
+                        left: keys['a'] || keys['A'] || keys['ArrowLeft'] || false,
+                        right: keys['d'] || keys['D'] || keys['ArrowRight'] || false,
+                        kick: keys[' '] || keys['Enter'] || false
+                    };
+                    updateDoc(onlineRoomRef, { guestInput: currentGuestInput }).catch(()=>{});
+                }
+            }
+        }
+
+        function interpolateGuestPhysics() {
+            if (!networkState) return;
+            // Interpolação Linear suave pro Guest para não parecer travado
+            const lerp = (a, b, t) => a + (b - a) * t;
+            const factor = 0.3;
+
+            ball.x = lerp(ball.x, networkState.ball.x, factor);
+            ball.y = lerp(ball.y, networkState.ball.y, factor);
+            
+            player1.x = lerp(player1.x, networkState.p1.x, factor);
+            player1.y = lerp(player1.y, networkState.p1.y, factor);
+            player1.isKicking = networkState.p1.isKicking;
+            player1.stamina = networkState.p1.stamina;
+
+            player2.x = lerp(player2.x, networkState.p2.x, factor);
+            player2.y = lerp(player2.y, networkState.p2.y, factor);
+            player2.isKicking = networkState.p2.isKicking;
+            player2.stamina = networkState.p2.stamina;
+
+            // Histórico de rastro visual para o Guest
+            if (Math.hypot(networkState.ball.vx, networkState.ball.vy) > 3) {
+                ball.trail.push({ x: ball.x, y: ball.y });
+                if (ball.trail.length > 8) ball.trail.shift();
+            } else { ball.trail = []; }
+        }
+
+        // FÍSICA AUTORITATIVA (Roda Local, vs Bot, ou Host Online)
+        function updatePhysics() {
+            if (gameState !== 'PLAYING') return;
+
+            const t1 = TEAMS[player1.team];
+            const t2 = TEAMS[player2.team];
+            const friction = 0.93;
+
+            // MOVIMENTAÇÃO P1 (Sempre Teclado Local se for Host/Local)
+            if (keys['w'] || keys['W']) player1.vy -= t1.speed;
+            if (keys['s'] || keys['S']) player1.vy += t1.speed;
+            if (keys['a'] || keys['A']) player1.vx -= t1.speed;
+            if (keys['d'] || keys['D']) player1.vx += t1.speed;
+
+            if (keys[' '] && player1.stamina > 20) {
+                if (!player1.isKicking) {
+                    player1.isKicking = true; player1.stamina -= 22; kickBall(player1, t1);
+                }
+            } else { player1.isKicking = false; }
+
+            // MOVIMENTAÇÃO P2 (Pode ser Local, IA, ou Rede)
+            if (gameMode === '2P') {
+                if (keys['ArrowUp']) player2.vy -= t2.speed;
+                if (keys['ArrowDown']) player2.vy += t2.speed;
+                if (keys['ArrowLeft']) player2.vx -= t2.speed;
+                if (keys['ArrowRight']) player2.vx += t2.speed;
+                if (keys['Enter'] && player2.stamina > 20) {
+                    if (!player2.isKicking) { player2.isKicking = true; player2.stamina -= 22; kickBall(player2, t2); }
+                } else { player2.isKicking = false; }
+            } else if (gameMode === 'AI') {
+                updateSmartAI(t2);
+            } else if (gameMode === 'ONLINE' && isHost) {
+                // Aplica inputs recebidos do Guest
+                if (guestNetworkKeys.up) player2.vy -= t2.speed;
+                if (guestNetworkKeys.down) player2.vy += t2.speed;
+                if (guestNetworkKeys.left) player2.vx -= t2.speed;
+                if (guestNetworkKeys.right) player2.vx += t2.speed;
+                if (guestNetworkKeys.kick && player2.stamina > 20) {
+                    if (!player2.isKicking) { player2.isKicking = true; player2.stamina -= 22; kickBall(player2, t2); }
+                } else { player2.isKicking = false; }
+            }
+
+            // FÍSICA DOS JOGADORES
+            [player1, player2].forEach(p => {
+                p.vx *= friction; p.vy *= friction; p.x += p.vx; p.y += p.vy;
+                p.stamina = Math.min(100, p.stamina + 0.45);
+                p.x = Math.max(p.radius + 10, Math.min(canvas.width - p.radius - 10, p.x));
+                p.y = Math.max(p.radius + 10, Math.min(canvas.height - p.radius - 10, p.y));
+            });
+
+            // COLISÃO CORPO A CORPO (Jogadores)
+            const pdx = player2.x - player1.x; const pdy = player2.y - player1.y;
+            const pDist = Math.hypot(pdx, pdy); const pMinDist = player1.radius + player2.radius;
+            if (pDist < pMinDist && pDist > 0) {
+                const overlap = pMinDist - pDist;
+                const nx = pdx / pDist; const ny = pdy / pDist;
+                
+                // Separação justa para não ficarem grudados
+                player1.x -= nx * overlap * 0.5; player1.y -= ny * overlap * 0.5;
+                player2.x += nx * overlap * 0.5; player2.y += ny * overlap * 0.5;
+                
+                // Física Elástica Correta
+                const kx = player1.vx - player2.vx; const ky = player1.vy - player2.vy;
+                const dotProduct = (kx * nx + ky * ny);
+                
+                if (dotProduct < 0) { // Só aplica repulsão se estiverem indo de encontro
+                    const p = 1.3 * dotProduct / (player1.mass + player2.mass);
+                    player1.vx -= p * player2.mass * nx; player1.vy -= p * player2.mass * ny;
+                    player2.vx += p * player1.mass * nx; player2.vy += p * player1.mass * ny;
+                    playSound('bounce');
+                }
+            }
+
+            // FÍSICA DA BOLA
+            ball.vx *= 0.984; ball.vy *= 0.984;
+            // Curva removida conforme solicitado:
+            // if (Math.abs(ball.spin) > 0.1) { ball.vy += ball.spin * 0.05; ball.spin *= 0.95; }
+            ball.x += ball.vx; ball.y += ball.vy;
+
+            if (Math.hypot(ball.vx, ball.vy) > 3) {
+                ball.trail.push({ x: ball.x, y: ball.y });
+                if (ball.trail.length > 8) ball.trail.shift();
+            } else { ball.trail = []; }
+
+            // COLISÃO JOGADOR vs BOLA
+            [player1, player2].forEach(p => {
+                const dx = ball.x - p.x; const dy = ball.y - p.y; const dist = Math.hypot(dx, dy);
+                const bMinDist = p.radius + ball.radius;
+                
+                if (dist < bMinDist && dist > 0) {
+                    const overlap = bMinDist - dist;
+                    const nx = dx / dist; const ny = dy / dist;
+                    
+                    // Empurra a bola para fora do jogador (resolve sobreposição limpa)
+                    ball.x += nx * overlap;
+                    ball.y += ny * overlap;
+
+                    // Reflexão elástica da bola contra o jogador
+                    const kx = ball.vx - p.vx; const ky = ball.vy - p.vy;
+                    const dotProduct = (kx * nx + ky * ny);
+
+                    // A bola só rebate se ela não estiver fugindo do jogador
+                    if (dotProduct < 0) {
+                        const bounce = 1.5; // Coeficiente de pulo/repulsão
+                        ball.vx -= bounce * dotProduct * nx;
+                        ball.vy -= bounce * dotProduct * ny;
+                        
+                        // Adiciona a inércia suave do movimento do jogador na bola
+                        ball.vx += p.vx * 0.4;
+                        ball.vy += p.vy * 0.4;
+                    }
+                    playSound('bounce');
+                }
+            });
+
+            // GOLS E PAREDES
+            const goalTop = canvas.height * 0.37; const goalBottom = canvas.height * 0.63;
+            const leftPosts = [{ x: 10, y: goalTop }, { x: 10, y: goalBottom }];
+            const rightPosts = [{ x: canvas.width - 10, y: goalTop }, { x: canvas.width - 10, y: goalBottom }];
+
+            [...leftPosts, ...rightPosts].forEach(post => {
+                const dx = ball.x - post.x; const dy = ball.y - post.y; const dist = Math.hypot(dx, dy);
+                if (dist < ball.radius + 7) {
+                    const angle = Math.atan2(dy, dx); const speed = Math.hypot(ball.vx, ball.vy);
+                    ball.vx = Math.cos(angle) * speed * 0.95; ball.vy = Math.sin(angle) * speed * 0.95;
+                    ball.x = post.x + Math.cos(angle) * (ball.radius + 8);
+                    ball.y = post.y + Math.sin(angle) * (ball.radius + 8);
+                    playSound('bounce'); triggerShake(4, 8); createParticles(post.x, post.y, '#ffffff', 10);
+                }
+            });
+
+            if (ball.y - ball.radius < 10) { ball.y = 10 + ball.radius; ball.vy *= -0.85; playSound('bounce'); }
+            if (ball.y + ball.radius > canvas.height - 10) { ball.y = canvas.height - 10 - ball.radius; ball.vy *= -0.85; playSound('bounce'); }
+
+            if (ball.x - ball.radius < 10) {
+                if (ball.y > goalTop && ball.y < goalBottom) scoreGoal('P2');
+                else { ball.x = 10 + ball.radius; ball.vx *= -0.85; playSound('bounce'); }
+            }
+            if (ball.x + ball.radius > canvas.width - 10) {
+                if (ball.y > goalTop && ball.y < goalBottom) scoreGoal('P1');
+                else { ball.x = canvas.width - 10 - ball.radius; ball.vx *= -0.85; playSound('bounce'); }
+            }
+        }
+
+        function kickBall(player, teamStats) {
+            const dx = ball.x - player.x; const dy = ball.y - player.y; const dist = Math.hypot(dx, dy);
+            if (dist < player.radius + ball.radius + 28) {
+                const angle = Math.atan2(dy, dx);
+                ball.vx = Math.cos(angle) * teamStats.kickPower;
+                ball.vy = Math.sin(angle) * teamStats.kickPower;
+                // Curva removida:
+                // ball.spin = (player.vy - player.vx) * teamStats.curve;
+                playSound('kick'); triggerShake(6, 10); createParticles(ball.x, ball.y, '#f59e0b', 16);
+            }
+        }
+
+        function updateSmartAI(t2) {
+            let targetX = ball.x + 40; let targetY = ball.y;
+            if (ball.x > canvas.width * 0.5 && player2.x < ball.x) {
+                targetX = ball.x + 50; targetY = ball.y > canvas.height / 2 ? ball.y - 50 : ball.y + 50;
+            }
+            if (player2.x < targetX) player2.vx += t2.speed;
+            if (player2.x > targetX) player2.vx -= t2.speed;
+            if (player2.y < targetY) player2.vy += t2.speed;
+            if (player2.y > targetY) player2.vy -= t2.speed;
+
+            const distBall = Math.hypot(ball.x - player2.x, ball.y - player2.y);
+            if (distBall < 55 && player2.x > ball.x && player2.stamina > 22) {
+                player2.isKicking = true; player2.stamina -= 22; kickBall(player2, t2);
+            } else { player2.isKicking = false; }
+        }
+
+        function scoreGoalEffect() {
+            playSound('goal'); triggerShake(14, 25);
+            createParticles(ball.x, ball.y, '#ffffff', 40, true);
+            gameState = 'GOAL';
+        }
+
+        function scoreGoal(winner) {
+            scoreGoalEffect();
+            if (winner === 'P1') scoreP1++; else scoreP2++;
+            
+            if (isOnline && isHost) {
+                updateDoc(onlineRoomRef, { gameState: 'GOAL', scoreP1, scoreP2 });
+            }
+
+            setTimeout(() => {
+                if (goalLimit > 0 && (scoreP1 >= goalLimit || scoreP2 >= goalLimit)) {
+                    const winnerName = scoreP1 >= goalLimit ? TEAMS[p1TeamKey].name : TEAMS[p2TeamKey].name;
+                    customAlert("FIM DE PARTIDA!", `🏆 ${winnerName} é o Grande Campeão!`, startNewGame);
+                } else {
+                    resetPositions();
+                    gameState = 'PLAYING';
+                    if (isOnline && isHost) updateDoc(onlineRoomRef, { gameState: 'PLAYING' });
+                }
+            }, 2500);
+        }
+
+        function startNewGame() {
+            scoreP1 = 0; scoreP2 = 0; matchTime = 180;
+            resetPositions();
+            gameState = 'PLAYING';
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (gameState === 'PLAYING') {
+                    // Host ou Local comanda o relógio
+                    if (!isOnline || isHost) {
+                        matchTime--;
+                        if (matchTime <= 0) {
+                            clearInterval(timerInterval);
+                            customAlert("APITO FINAL!", `⏱️ Placar: ${TEAMS[p1TeamKey].name} ${scoreP1} x ${scoreP2} ${TEAMS[p2TeamKey].name}`, startNewGame);
+                        }
+                    }
+                }
+            }, 1000);
+        }
+
+        // RENDERIZAÇÃO
+        function render() {
+            ctx.save();
+            if (shakeTime > 0) {
+                ctx.translate((Math.random() - 0.5) * shakeIntensity, (Math.random() - 0.5) * shakeIntensity);
+                shakeTime--;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const pitchGrad = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, 80, canvas.width / 2, canvas.height / 2, canvas.width);
+            pitchGrad.addColorStop(0, '#16a34a'); pitchGrad.addColorStop(1, '#052e16');
+            ctx.fillStyle = pitchGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "rgba(255,255,255,0.04)";
+            const stripeW = canvas.width / 12;
+            for (let i = 0; i < 12; i += 2) ctx.fillRect(i * stripeW, 0, stripeW, canvas.height);
+
+            ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 4;
+            ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+            ctx.beginPath(); ctx.moveTo(canvas.width / 2, 10); ctx.lineTo(canvas.width / 2, canvas.height - 10); ctx.stroke();
+            ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 65, 0, Math.PI * 2); ctx.stroke();
+
+            const goalTop = canvas.height * 0.37; const goalHeight = canvas.height * 0.26; const areaWidth = canvas.width * 0.12;
+            ctx.strokeRect(10, goalTop - 12, areaWidth, goalHeight + 24);
+            ctx.strokeRect(canvas.width - 10 - areaWidth, goalTop - 12, areaWidth, goalHeight + 24);
+
+            ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = 1.5;
+            for (let y = goalTop; y <= goalTop + goalHeight; y += 8) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(10, y); ctx.moveTo(canvas.width - 10, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 2.5;
+            [{ x: 10, y: goalTop }, { x: 10, y: goalTop + goalHeight }, { x: canvas.width - 10, y: goalTop }, { x: canvas.width - 10, y: goalTop + goalHeight }].forEach(post => {
+                ctx.beginPath(); ctx.arc(post.x, post.y, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            });
+
+            drawParticles();
+
+            if (ball.trail.length > 1) {
+                ctx.beginPath(); ctx.moveTo(ball.trail[0].x, ball.trail[0].y);
+                for (let i = 1; i < ball.trail.length; i++) ctx.lineTo(ball.trail[i].x, ball.trail[i].y);
+                ctx.strokeStyle = "rgba(251, 191, 36, 0.4)"; ctx.lineWidth = 6; ctx.stroke();
+            }
+
+            drawPlayerAt(player1.x, player1.y, player1.radius, TEAMS[player1.team], player1.isKicking, player1.stamina, "P1");
+            drawPlayerAt(player2.x, player2.y, player2.radius, TEAMS[player2.team], player2.isKicking, player2.stamina, "P2");
+            drawBallAt(ball.x, ball.y);
+            drawHUD();
+            ctx.restore();
+        }
+
+        function drawBallAt(x, y) {
+            ctx.beginPath(); ctx.arc(x + 4, y + 5, ball.radius, 0, Math.PI * 2); ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fill();
+            ctx.beginPath(); ctx.arc(x, y, ball.radius, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill();
+            ctx.lineWidth = 2.5; ctx.strokeStyle = "#020617"; ctx.stroke();
+            ctx.beginPath(); ctx.arc(x, y, ball.radius * 0.45, 0, Math.PI * 2); ctx.fillStyle = "#0f172a"; ctx.fill();
+        }
+
+        function drawPlayerAt(x, y, r, team, isKicking, stamina, tag) {
+            ctx.beginPath(); ctx.arc(x + 4, y + 5, r, 0, Math.PI * 2); ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.fill();
+            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = team.color1; ctx.fill();
+            ctx.lineWidth = isKicking ? 7 : 4; ctx.strokeStyle = isKicking ? "#f59e0b" : team.color2; ctx.stroke();
+            ctx.font = "20px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(team.icon, x, y);
+            ctx.fillStyle = "rgba(2, 6, 23, 0.85)"; ctx.fillRect(x - 20, y - r - 14, 40, 7);
+            ctx.fillStyle = stamina > 25 ? "#10b981" : "#ef4444"; ctx.fillRect(x - 20, y - r - 14, (stamina / 100) * 40, 7);
+            ctx.font = "900 11px 'Orbitron', sans-serif"; ctx.fillStyle = "#ffffff"; ctx.fillText(tag, x, y - r - 20);
+        }
+
+        function drawHUD() {
+            const t1 = TEAMS[p1TeamKey]; const t2 = TEAMS[p2TeamKey];
+            const panelW = 340; const panelH = 58; const panelX = canvas.width / 2 - panelW / 2; const panelY = 14;
+
+            ctx.save(); ctx.fillStyle = "rgba(3, 7, 18, 0.94)"; ctx.beginPath(); ctx.roundRect(panelX, panelY, panelW, panelH, 16); ctx.fill();
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.18)"; ctx.lineWidth = 1.5; ctx.stroke();
+
+            ctx.fillStyle = "#ffffff"; ctx.font = "900 26px 'Orbitron', sans-serif"; ctx.textAlign = "center";
+            ctx.fillText(`${scoreP1}  -  ${scoreP2}`, canvas.width / 2, panelY + 36);
+
+            ctx.font = "800 12px 'Orbitron', sans-serif";
+            ctx.fillStyle = t1.color1 === '#ffffff' ? '#cbd5e1' : t1.color1; ctx.textAlign = "right"; ctx.fillText(t1.name.toUpperCase(), canvas.width / 2 - 58, panelY + 28);
+            ctx.fillStyle = t2.color1 === '#ffffff' ? '#cbd5e1' : t2.color1; ctx.textAlign = "left"; ctx.fillText(t2.name.toUpperCase(), canvas.width / 2 + 58, panelY + 28);
+
+            const mins = Math.floor(matchTime / 60); const secs = matchTime % 60;
+            ctx.fillStyle = "#f59e0b"; ctx.font = "700 11px 'Orbitron', sans-serif"; ctx.textAlign = "center";
+            ctx.fillText(`⏱️ ${mins}:${secs < 10 ? '0' : ''}${secs}`, canvas.width / 2, panelY + 52);
+            ctx.restore();
+
+            if (gameState === 'GOAL') {
+                ctx.save(); ctx.font = "900 48px 'Orbitron', sans-serif"; ctx.fillStyle = "#f59e0b"; ctx.textAlign = "center";
+                ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 18; ctx.fillText("⚽ GOOOOOL! ⚽", canvas.width / 2, canvas.height / 2); ctx.restore();
+            }
+        }
+
+        // LOOP PRINCIPAL
+        function gameLoop() {
+            if (isOnline && !isHost) {
+                interpolateGuestPhysics();
+            } else {
+                updatePhysics();
+            }
+            syncNetwork();
+            updateParticles();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = () => {
+            resizeCanvas();
+            renderTeamPicker();
+            document.getElementById('modal-mode-select').classList.remove('hidden');
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
